@@ -1,7 +1,9 @@
 from datetime import datetime
 from airflow.models.dag import DAG
-from airflow.sdk.definitions.asset import Asset
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
+from airflow.sdk import ObjectStoragePath, Asset, asset
+import requests
+
 
 cleaned_data_asset = Asset(uri="postgres://traindb:5432/traindb/public/clean_data_transactions")
 start_date = datetime(2025, 10, 11)
@@ -28,3 +30,31 @@ with DAG(
                 );
                 """,
         outlets=[cleaned_data_asset])
+
+
+
+OBJECT_STORAGE_SYSTEM = "s3"
+OBJECT_STORAGE_CONN_ID = "s3_conn"
+OBJECT_STORAGE_PATH = "dataops-bronze/raw"
+
+@asset(
+    schedule=[cleaned_data_asset],
+)
+def upload_dataset_to_minio():
+    """
+    Veri githubdan indiriliyor ve minioya yükleniyor
+    """
+    object_storage_path = ObjectStoragePath(
+        f"{OBJECT_STORAGE_SYSTEM}://{OBJECT_STORAGE_PATH}",
+        conn_id=OBJECT_STORAGE_CONN_ID,
+    )
+    target_file = object_storage_path / "dirty_store_transactions.csv"
+
+    if target_file.exists():
+        print("file already exists so this step is skipped")
+        return
+
+    response = requests.get("https://raw.githubusercontent.com/erkansirin78/datasets/refs/heads/master/dirty_store_transactions.csv")
+    if response.status_code == 200:
+        object_storage_path.mkdir(parents=True, exist_ok=True)
+        target_file.write_bytes(response.content)
