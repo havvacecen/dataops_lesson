@@ -3,6 +3,7 @@ from airflow.models.dag import DAG
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk import ObjectStoragePath, Asset, asset
 import requests
+from airflow.providers.ssh.operators.ssh import SSHOperator
 
 
 cleaned_data_asset = Asset(uri="postgres://traindb:5432/traindb/public/clean_data_transactions")
@@ -21,12 +22,12 @@ with DAG(
                 STORE_ID text,
                 STORE_LOCATION text,
                 PRODUCT_CATEGORY text,
-                PRODUCT_ID text,
+                PRODUCT_ID integer,
                 MRP float,
                 CP float,
                 DISCOUNT float,
                 SP float,
-                Date text  
+                Date_Casted date  
                 );
                 """,
         outlets=[cleaned_data_asset])
@@ -58,3 +59,20 @@ def upload_dataset_to_minio():
     if response.status_code == 200:
         object_storage_path.mkdir(parents=True, exist_ok=True)
         target_file.write_bytes(response.content)
+
+
+
+
+
+@asset(
+    schedule=[upload_dataset_to_minio], 
+)
+def transform_and_writePostgres():
+    """
+    Spark Client container'ın ve data_transform.py'yi çalıştırması sağlanıyor.
+    """
+    return SSHOperator(
+        task_id="transform_and_writePosgres_data",
+        ssh_conn_id="spark_client_connection",
+        command="spark-submit --packages org.apache.hadoop:hadoop-aws:3.3.0,org.postgresql:postgresql:42.2.18 /opt/spark_code/transform_script.py"
+    )
