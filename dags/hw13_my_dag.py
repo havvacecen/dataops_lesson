@@ -3,7 +3,7 @@ from airflow.models.dag import DAG
 from airflow.sdk.definitions.asset import Asset
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 
-cleaned_data_asset = Asset(uri="postgres://traindb/traindb/public/clean_data_transactions")
+cleaned_data_asset = Asset(uri="postgres://traindb:5432/traindb/public/clean_data_transactions")
 start_date = datetime(2025, 10, 11)
 with DAG(
     dag_id="create_cleaned_data_table",
