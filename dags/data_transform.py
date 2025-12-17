@@ -3,6 +3,8 @@ import pyspark.sql.functions as F
 from pyspark.sql.functions import to_date, col
 from pyspark.sql.types import StringType, IntegerType, FloatType
 
+print("Spark is starting")
+
 spark = SparkSession.builder \
     .appName("Minio_to_Postgres") \
     .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.0") \
@@ -13,7 +15,15 @@ spark = SparkSession.builder \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
     .getOrCreate()
 
-df1 = spark.read.csv("s3a://dataops-bronze/raw/dirty_store_transactions.csv", header=True, inferSchema=True)
+print("reading from minio")
+
+try:
+    df1 = spark.read.csv("s3a://dataops-bronze/raw/dirty_store_transactions.csv", header=True, inferSchema=True)
+    print("read data successfuly")
+except:
+    print("reading data error")
+    raise
+
 df2 = df1.withColumnRenamed("Date", "Date_Casted")
 df2 = df2.withColumn("STORE_ID", F.trim(F.regexp_replace(F.col("STORE_ID"), "[^A-Za-z0-9]", "")))
 
@@ -39,14 +49,20 @@ for ch_flo in change_to_float:
 
 df2 = df2.withColumn("Date_Casted", F.to_date(F.trim(F.col("Date_Casted")), "yyyy-M-d"))
 
-df2.write \
-    .format("jdbc") \
-    .option("url", "jdbc:postgresql://postgres:5432/traindb") \
-    .option("dbtable", "clean_data_transactions") \
-    .option("user", "airflow") \
-    .option("password", "airflow") \
-    .option("driver", "org.postgresql.Driver") \
-    .mode("append") \
-    .save()
+print("write to postgres")
+try:
+    df2.write \
+        .format("jdbc") \
+        .option("url", "jdbc:postgresql://postgres:5432/traindb") \
+        .option("dbtable", "clean_data_transactions") \
+        .option("user", "airflow") \
+        .option("password", "airflow") \
+        .option("driver", "org.postgresql.Driver") \
+        .mode("append") \
+        .save()
+    print("completed")
+except:
+    print("writing postgres error")
+    raise
 
 spark.stop()
