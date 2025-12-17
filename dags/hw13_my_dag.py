@@ -74,5 +74,6 @@ def transform_and_writePostgres():
     SSHOperator(
         task_id="transform_and_writePosgres_data",
         ssh_conn_id="spark_client_connection",
-        command="spark-submit --packages org.apache.hadoop:hadoop-aws:3.3.0,org.postgresql:postgresql:42.2.18 /opt/spark_code/transform_script.py"
+        command="spark-submit --packages org.apache.hadoop:hadoop-aws:3.3.0,org.postgresql:postgresql:42.2.18 /opt/spark_code/transform_script.py",
+        cmd_timeout=600
     ).execute(context={})
