@@ -7,7 +7,7 @@ print("Spark is starting")
 
 spark = SparkSession.builder \
     .appName("Minio_to_Postgres") \
-    .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.0") \
+    .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.0, org.postgresql:postgresql:42.2.18") \
     .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
     .config("spark.hadoop.fs.s3a.access.key", "dataopsadmin") \
     .config("spark.hadoop.fs.s3a.secret.key", "dataopsadmin") \
@@ -21,7 +21,7 @@ try:
     df1 = spark.read.csv("s3a://dataops-bronze/raw/dirty_store_transactions.csv", header=True, inferSchema=True)
     print("read data successfuly")
 except:
-    print("reading data error")
+    print("reading data error: {str(e)}")
     raise
 
 df2 = df1.withColumnRenamed("Date", "Date_Casted")
