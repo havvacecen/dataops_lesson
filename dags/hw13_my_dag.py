@@ -65,8 +65,7 @@ def upload_dataset_to_minio():
 
 
 @asset(
-    schedule=[upload_dataset_to_minio],
-    uri="postgres://traindb:5432/traindb/public/clean_data_transactions" 
+    schedule=[upload_dataset_to_minio]
 )
 def transform_and_writePostgres():
     """
